@@ -1,90 +1,111 @@
-import pandas as pd                                       #importing pandas
-import numpy as np                                        #importing numpy
-import matplotlib.pyplot as plt                           #importing matplotlib 
-import seaborn as sns                                     #importing seaborn
-from sklearn.model_selection import train_test_split      #importing scikit-learn's function for data splitting
-from sklearn.linear_model import LinearRegression         #importing scikit-learn's linear regressor function
-from sklearn.neural_network import MLPRegressor           #importing scikit-learn's neural network function
-from sklearn.ensemble import GradientBoostingRegressor    #importing scikit-learn's gradient booster regressor function
-from sklearn.metrics import mean_squared_error            #importing scikit-learn's root mean squared error function for model evaluation
-from sklearn.model_selection import cross_validate        #improting scikit-learn's cross validation function
-from sklearn.preprocessing import StandardScaler          #importing scikit-learn's standard scaler
+import pandas as pd
+import numpy as np
+from sklearn.preprocessing import StandardScaler
+from sklearn.model_selection import train_test_split
+from sklearn.neural_network import MLPClassifier
+from sklearn.metrics import f1_score
+import random
 
-# Cargar el dataset
-boxscores = pd.read_csv('base.csv')
+# 1. Cargar el dataset
+data = pd.read_csv('base.csv')
 
-# Acotación de la muestra
-boxscores['fraud_score'] = (
-    2 * boxscores['velocity_6h'] +
-    1.5 * boxscores['velocity_24h'] -
-    0.5 * boxscores['bank_months_count'] +
-    3 * boxscores['proposed_credit_limit'] +
-    1.25 * boxscores['credit_risk_score']
-)
+# 2. Balancear el dataset (50/50 con submuestreo)
+fraud = data[data['fraud_bool'] == 1]
+non_fraud = data[data['fraud_bool'] == 0].sample(n=len(fraud), random_state=42)
+balanced_df = pd.concat([fraud, non_fraud]).sample(frac=1, random_state=42).reset_index(drop=True)
 
-boxscores = boxscores.sample(frac=0.1, random_state=42)
+# 3. Separar variables predictoras y etiquetas
+X = balanced_df.drop(columns=['fraud_bool'])
+y = balanced_df['fraud_bool']
 
-# Selección de variables (features) y target
-X = boxscores[['velocity_6h', 'customer_age', 'bank_months_count', 'proposed_credit_limit', 'credit_risk_score', 'name_email_similarity', 'zip_count_4w']]  # características
-y = boxscores['fraud_score']  # objetivo
+# 4. Codificar variables categóricas
+categorical_cols = ['payment_type', 'employment_status', 'housing_status', 'source', 'device_os']
+X = pd.get_dummies(X, columns=categorical_cols)
 
-# Dividir el dataset en conjunto de entrenamiento y conjunto de prueba
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=4)
-
-# Escalar los datos
+# 5. Escalar numéricas
+numeric_cols = X.select_dtypes(include=['int64', 'float64']).columns
 scaler = StandardScaler()
-X_train_scaled = scaler.fit_transform(X_train)
-X_test_scaled = scaler.transform(X_test)
+X[numeric_cols] = scaler.fit_transform(X[numeric_cols])
 
-# 1. **Regresión Lineal**
-linear_regressor = LinearRegression()
-linear_regressor.fit(X_train_scaled, y_train)
-linear_regression_validation = cross_validate(linear_regressor, X_train_scaled, y_train, cv=3, return_train_score=True, return_estimator=True)
+# 6. División train/test
+X_train, X_test, y_train, y_test = train_test_split(X, y, stratify=y, test_size=0.2, random_state=42)
 
-# 2. **Red Neuronal (MLP)**
-mlp = MLPRegressor(hidden_layer_sizes=(3, 3), max_iter=1000, random_state=42, learning_rate_init=0.01)  # Ajustes para mejorar convergencia
-mlp.fit(X_train_scaled, y_train)
-mlp_validation = cross_validate(mlp, X_train_scaled, y_train, cv=3, return_train_score=True, return_estimator=True)
+# 7. GA para arquitectura + alpha
+activation_options = ['relu', 'tanh', 'logistic']
 
-# 3. **Gradient Boosting Regressor**
-gb = GradientBoostingRegressor(n_estimators=50, max_depth=3, random_state=42)  
-gb.fit(X_train_scaled, y_train)
-gb_validation = cross_validate(gb, X_train_scaled, y_train, cv=3, return_train_score=True, return_estimator=True)
+def create_individual():
+    return [
+        random.randint(16, 128),     # capa 1
+        random.randint(0, 64),     # capa 2 (0 = no usar)
+        random.choice(activation_options),  # activación
+        10 ** random.uniform(-5, 0)  # alpha en rango [1e-5, 1]
+    ]
 
-linear_regression_predictions = linear_regressor.predict(X_test_scaled)                              #make predictions based on the test set for the linear regression model
-mlp_predictions = mlp.predict(X_test_scaled)                                                         #make predictions based on the test set for the neural network model
-gb_predictions = gb.predict(X_test_scaled)                                                           #make predictions based on the test set for the gradient boosting model
+def mutate(ind):
+    if random.random() < 0.5:
+        ind[0] = random.randint(16, 128)
+    if random.random() < 0.5:
+        ind[1] = random.randint(0, 64)
+    if random.random() < 0.3:
+        ind[2] = random.choice(activation_options)
+    if random.random() < 0.4:
+        ind[3] = 10 ** random.uniform(-5, 0)
+    return ind
 
-linear_regression_mse = mean_squared_error(y_test, linear_regression_predictions)             #calculate the MSE for the linear regression model
-mlp_mse = mean_squared_error(y_test, mlp_predictions)                                         #calculate the MSE for the neural network model
-gb_mse = mean_squared_error(y_test, gb_predictions)                                           #calculate the MSE for the gradient boosting model
+def crossover(p1, p2):
+    return [
+        p1[0] if random.random() < 0.5 else p2[0],
+        p1[1] if random.random() < 0.5 else p2[1],
+        p1[2] if random.random() < 0.5 else p2[2],
+        p1[3] if random.random() < 0.5 else p2[3]
+    ]
 
-print("Linear Regression MSE:", linear_regression_mse)
-print("Neural Network MSE:", mlp_mse)
-print("Gradient Boosting MSE:", gb_mse)
+def evaluate(ind):
+    layers = (ind[0],) if ind[1] == 0 else (ind[0], ind[1])
+    activation = ind[2]
+    alpha = ind[3]
 
-results = {'Linear Regression':[linear_regression_mse],'ReLU Neural Network':[mlp_mse],'Gradient Boosting Regressor':[gb_mse]}
-modeling_results = pd.DataFrame(data=results, index=['MSE'])
+    model = MLPClassifier(
+        hidden_layer_sizes=layers,
+        activation=activation,
+        alpha=alpha,
+        max_iter=2000,
+        random_state=42
+    )
+    model.fit(X_train, y_train)
+    preds = model.predict(X_test)
+    f1 = f1_score(y_test, preds)
+    print(f"Evaluando {ind} -> F1 Score: {f1:.4f}")
+    return f1
 
-print(modeling_results)
+# 8. Ejecutar GA
+GENERATIONS = 20
+POP_SIZE = 20
+CROSS_RATE = 0.5
+MUTATION_RATE = 0.5
 
-# Crear subplots para graficar los residuales
-fig, (LR, FNN, GBR) = plt.subplots(1, 3, figsize=(15, 5))
-fig.tight_layout()
+population = [create_individual() for _ in range(POP_SIZE)]
 
-# Graficar residuales para cada modelo
-LR.scatter(x=linear_regression_predictions, y=y_test - linear_regression_predictions, color='red', alpha=0.06)
-FNN.scatter(x=mlp_predictions, y=y_test - mlp_predictions, color='green', alpha=0.06)
-GBR.scatter(x=gb_predictions, y=y_test - gb_predictions, color='blue', alpha=0.06)
+for generation in range(GENERATIONS):
+    print(f"\nGeneración {generation + 1}")
+    scores = [(evaluate(ind), ind) for ind in population]
+    scores.sort(reverse=True)
+    best_score = scores[0][0]
+    print(f"Mejor F1 Score: {best_score:.4f}")
 
-# Etiquetas de los ejes
-LR.set_xlabel('Linear Regression Predicted Fraud Score')
-FNN.set_xlabel('Neural Network Predicted Fraud Score')
-GBR.set_xlabel('Gradient Boosting Predicted Fraud Score')
+    survivors = [ind for _, ind in scores[:POP_SIZE // 2]]
+    offspring = []
+    while len(offspring) < POP_SIZE // 2:
+        p1, p2 = random.sample(survivors, 2)
+        if random.random() < CROSS_RATE:
+            child = crossover(p1, p2)
+        if random.random() < MUTATION_RATE:
+            child = mutate(child)
+        offspring.append(child)
 
-LR.set_ylabel('Linear Regression Residual')
-FNN.set_ylabel('Neural Network Residual')
-GBR.set_ylabel('Gradient Boosting Residual')
+    population = survivors + offspring
 
-# Mostrar gráficos
-plt.show()
+# 9. Mostrar mejor configuración
+best_individual = scores[0][1]
+best_layers = (best_individual[0],) if best_individual[1] == 0 else (best_individual[0], best_individual[1])
+print(f"\nMejor individuo encontrado: capas={best_layers}, activación={best_individual[2]}, alpha={best_individual[3]:.5f}")
