@@ -82,7 +82,7 @@ def evaluate(ind):
 GENERATIONS = 50
 POP_SIZE = 20
 CROSS_RATE = 0.5
-MUTATION_RATE = 0.5
+MUTATION_RATE = 0.01
 
 population = [create_individual() for _ in range(POP_SIZE)]
 
