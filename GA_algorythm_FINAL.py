@@ -79,7 +79,7 @@ def evaluate(ind):
     return f1
 
 # 8. Ejecutar GA
-GENERATIONS = 20
+GENERATIONS = 50
 POP_SIZE = 20
 CROSS_RATE = 0.5
 MUTATION_RATE = 0.5
