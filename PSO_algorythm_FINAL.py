@@ -86,7 +86,7 @@ class Particle:
 
 # 4. Ejecutar PSO (Ajustar global_best_position a 3 dimensiones)
 NUM_PARTICLES = 20
-NUM_ITERATIONS = 20
+NUM_ITERATIONS = 50
 
 swarm = [Particle() for _ in range(NUM_PARTICLES)]
 global_best_position = swarm[0].position.copy() # Ahora 3 dimensiones
