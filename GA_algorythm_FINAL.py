@@ -31,33 +31,33 @@ X[numeric_cols] = scaler.fit_transform(X[numeric_cols])
 X_train, X_test, y_train, y_test = train_test_split(X, y, stratify=y, test_size=0.2, random_state=42)
 
 # 7. GA para arquitectura + alpha
-activation_options = ['relu', 'tanh', 'logistic']
+activation_functions = ['relu', 'tanh', 'logistic']
 
 def create_individual():
     return [
         random.randint(16, 128),     # capa 1
         random.randint(0, 64),     # capa 2 (0 = no usar)
-        random.choice(activation_options),  # activación
+        random.choice(activation_functions),  # activación
         10 ** random.uniform(-5, 0)  # alpha en rango [1e-5, 1]
     ]
 
 def mutate(ind):
-    if random.random() < 0.5:
+    if random.random() < MUTATION_RATE:
         ind[0] = random.randint(16, 128)
-    if random.random() < 0.5:
+    if random.random() < MUTATION_RATE:
         ind[1] = random.randint(0, 64)
-    if random.random() < 0.3:
-        ind[2] = random.choice(activation_options)
-    if random.random() < 0.4:
+    if random.random() < MUTATION_RATE - 0.2:
+        ind[2] = random.choice(activation_functions)
+    if random.random() < MUTATION_RATE - 0.1:
         ind[3] = 10 ** random.uniform(-5, 0)
     return ind
 
 def crossover(p1, p2):
     return [
-        p1[0] if random.random() < 0.5 else p2[0],
-        p1[1] if random.random() < 0.5 else p2[1],
-        p1[2] if random.random() < 0.5 else p2[2],
-        p1[3] if random.random() < 0.5 else p2[3]
+        p1[0] if random.random() < CROSS_RATE else p2[0],
+        p1[1] if random.random() < CROSS_RATE else p2[1],
+        p1[2] if random.random() < CROSS_RATE else p2[2],
+        p1[3] if random.random() < CROSS_RATE else p2[3]
     ]
 
 def evaluate(ind):
@@ -97,8 +97,7 @@ for generation in range(GENERATIONS):
     offspring = []
     while len(offspring) < POP_SIZE // 2:
         p1, p2 = random.sample(survivors, 2)
-        if random.random() < CROSS_RATE:
-            child = crossover(p1, p2)
+        child = crossover(p1, p2)
         if random.random() < MUTATION_RATE:
             child = mutate(child)
         offspring.append(child)
