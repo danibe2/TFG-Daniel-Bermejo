@@ -46,9 +46,9 @@ def mutate(ind):
         ind[0] = random.randint(16, 128)
     if random.random() < MUTATION_RATE:
         ind[1] = random.randint(0, 64)
-    if random.random() < MUTATION_RATE - 0.2:
+    if random.random() < MUTATION_RATE:
         ind[2] = random.choice(activation_functions)
-    if random.random() < MUTATION_RATE - 0.1:
+    if random.random() < MUTATION_RATE:
         ind[3] = 10 ** random.uniform(-5, 0)
     return ind
 
