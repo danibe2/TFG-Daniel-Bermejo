@@ -74,7 +74,6 @@ print(classification_report(y_test, y_pred_grid))
 # ======================
 # Paso 3: Random Search
 # ======================
-print("\n=== Paso 3: Iniciando Random Search ===")
 def generate_random_layers(n_configs=30):
     configs = []
     for _ in range(n_configs):
@@ -92,7 +91,6 @@ param_dist = {
     'activation': activation_functions
 }
 
-print(f"Probando 30 configuraciones aleatorias de arquitectura ocultas...")
 random_search = RandomizedSearchCV(
     estimator=MLPClassifier(max_iter=500, random_state=42),
     param_distributions=param_dist,
@@ -103,9 +101,7 @@ random_search = RandomizedSearchCV(
     n_jobs=-1
 )
 
-print("Entrenando modelos con Random Search (esto también puede tardar)...")
 random_search.fit(X_train, y_train)
-print("Random Search completado.")
 
 y_pred_rand = random_search.predict(X_test)
 print("\n=== Resultados Random Search ===")
