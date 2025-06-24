@@ -25,7 +25,7 @@ X[numeric_cols] = scaler.fit_transform(X[numeric_cols])
 
 X_train, X_test, y_train, y_test = train_test_split(X, y, stratify=y, test_size=0.2, random_state=42)
 
-# === 2. Espacio de búsqueda ===
+# === 2. Espacio de búsqueda + Random Search ===
 activation_options = ['relu', 'tanh', 'logistic']
 N_ITER = 100
 best_f1 = -1
