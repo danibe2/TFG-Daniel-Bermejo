@@ -55,7 +55,7 @@ for _ in range(N_ITER):
         best_params = (layers, activation, alpha)
 
 # === 3. Mejor resultado ===
-print("\n=== MEJOR CONFIGURACIÓN ENCONTRADA ===")
+print("\n=== MEJOR CONFIGURACIÓN RANDOM SEARCH ===")
 print(f"Capas ocultas: {best_params[0]}")
 print(f"Función de activación: {best_params[1]}")
 print(f"Alpha: {best_params[2]:.5f}")
