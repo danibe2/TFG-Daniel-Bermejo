@@ -6,21 +6,26 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics import f1_score
 import itertools
 
-# === 1. Cargar y preprocesar ===
+# === 1. Preprocesado ===
 data = pd.read_csv('base.csv')
+
 fraud = data[data['fraud_bool'] == 1]
 non_fraud = data[data['fraud_bool'] == 0].sample(n=len(fraud), random_state=42)
-df = pd.concat([fraud, non_fraud]).sample(frac=1, random_state=42).reset_index(drop=True)
+balanced_df = pd.concat([fraud, non_fraud]).sample(frac=1, random_state=42).reset_index(drop=True)
 
-X = df.drop(columns=['fraud_bool'])
-y = df['fraud_bool']
-X = pd.get_dummies(X, columns=['payment_type', 'employment_status', 'housing_status', 'source', 'device_os'])
-X[X.select_dtypes(include=['int64', 'float64']).columns] = StandardScaler().fit_transform(
-    X.select_dtypes(include=['int64', 'float64']))
+X = balanced_df.drop(columns=['fraud_bool'])
+y = balanced_df['fraud_bool']
+
+categorical_cols = ['payment_type', 'employment_status', 'housing_status', 'source', 'device_os']
+X = pd.get_dummies(X, columns=categorical_cols)
+
+numeric_cols = X.select_dtypes(include=['int64', 'float64']).columns
+scaler = StandardScaler()
+X[numeric_cols] = scaler.fit_transform(X[numeric_cols])
 
 X_train, X_test, y_train, y_test = train_test_split(X, y, stratify=y, test_size=0.2, random_state=42)
 
-# === 2. espacio de búsqueda ===
+# === 2. Espacio de búsqueda ===
 param_grid = {
     'layer1': list(range(16, 129, 16)),  
     'layer2': list(range(0, 65, 16)),    
